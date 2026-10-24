@@ -1,0 +1,2247 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LifeOS — Journal & Wealth Matrix</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darLIVE CHARTSde: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Cairo', 'Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            },
+            dark: {
+              bg: '#090d16',
+              surface: '#0f172a',
+              card: '#151f38',
+              border: 'rgba(255, 255, 255, 0.08)',
+            }
+          },
+          backdropBlur: {
+            xs: '2px',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- External Libraries -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <style>
+    /* Custom Scrollbars & Glassmorphism */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.25); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.4); }
+
+    .glass-panel {
+      background: rgba(21, 31, 56, 0.72);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .light .glass-panel {
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+    }
+
+    .glass-card {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .light .glass-card {
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid rgba(226, 232, 240, 1);
+    }
+
+    /* Ambient Glows */
+    .glow-indigo { box-shadow: 0 0 35px -5px rgba(99, 102, 241, 0.3); }
+    .glow-emerald { box-shadow: 0 0 35px -5px rgba(16, 185, 129, 0.25); }
+    .glow-rose { box-shadow: 0 0 35px -5px rgba(244, 63, 94, 0.25); }
+
+    /* Touch Safe Area */
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom, 1rem); }
+  </style>
+</head>
+<body 
+  x-data="lifeOS()" 
+  x-init="initApp()" 
+  :class="[isDark ? 'dark bg-[#090d16] text-slate-100' : 'light bg-slate-50 text-slate-900', currentLang === 'ar' ? 'font-sans' : 'font-sans']"
+  :dir="currentLang === 'ar' ? 'rtl' : 'ltr'"
+  class="min-h-screen selection:bg-indigo-500 selection:text-white antialiased transition-colors duration-300">
+
+  <!-- Ambient Light Orbs -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="absolute -top-32 -left-32 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 -right-32 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-32 left-1/3 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- Master Lock / PIN Authentication Overlay -->
+  <div 
+    x-show="isLocked" 
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 scale-95"
+    x-transition:enter-end="opacity-100 scale-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100 scale-100"
+    x-transition:leave-end="opacity-0 scale-95"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-2xl">
+    
+    <div class="glass-panel w-full max-w-sm rounded-3xl p-6 text-center shadow-2xl relative border border-white/10">
+      <div class="w-16 h-16 rounded-2xl bg-indigo-600/20 text-indigo-400 mx-auto flex items-center justify-center mb-4 border border-indigo-500/30">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      </div>
+      <h2 class="text-xl font-bold mb-1" x-text="t('securityMasterLock')"></h2>
+      <p class="text-xs text-slate-400 mb-6" x-text="t('enterPinPrompt')"></p>
+
+      <!-- PIN Indicator Dots -->
+      <div class="flex justify-center gap-3 mb-8">
+        <template x-for="i in 4" :key="i">
+          <div 
+            class="w-4 h-4 rounded-full transition-all duration-200"
+            :class="enteredPin.length >= i ? 'bg-indigo-500 scale-110 shadow-lg shadow-indigo-500/50' : 'bg-slate-700/60'">
+          </div>
+        </template>
+      </div>
+
+      <!-- PIN Keypad -->
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        <template x-for="num in ['1','2','3','4','5','6','7','8','9']" :key="num">
+          <button 
+            @click="pressPin(num)" 
+            class="h-14 rounded-2xl bg-white/5 hover:bg-white/10 active:scale-95 text-lg font-bold font-mono transition border border-white/5 flex items-center justify-center">
+            <span x-text="num"></span>
+          </button>
+        </template>
+        <button 
+          @click="simulateBiometric()" 
+          class="h-14 rounded-2xl bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 active:scale-95 transition flex items-center justify-center border border-indigo-500/30"
+          title="FaceID / TouchID">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 004 11m0 0a8.003 8.003 0 0015.357 2m1.5-6.845A9.97 9.97 0 0012 3a9.97 9.97 0 00-7.857 3.82"/></svg>
+        </button>
+        <button 
+          @click="pressPin('0')" 
+          class="h-14 rounded-2xl bg-white/5 hover:bg-white/10 active:scale-95 text-lg font-bold font-mono transition border border-white/5 flex items-center justify-center">
+          0
+        </button>
+        <button 
+          @click="enteredPin = enteredPin.slice(0, -1)" 
+          class="h-14 rounded-2xl bg-white/5 hover:bg-white/10 active:scale-95 text-rose-400 transition flex items-center justify-center border border-white/5">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-7.172a2 2 0 00-1.414.586L3 12z"/></svg>
+        </button>
+      </div>
+
+      <p class="text-[11px] text-slate-500">
+        <span x-text="t('defaultPinHint')"></span>: <strong class="text-indigo-400">1234</strong>
+      </p>
+    </div>
+  </div>
+
+  <!-- Main Application Container -->
+  <div class="relative z-10 max-w-5xl mx-auto px-3 sm:px-6 pt-3 pb-24 md:pb-8 flex flex-col min-h-screen">
+    
+    <!-- Top Header & Status Bar -->
+    <header class="glass-panel rounded-2xl p-4 mb-4 flex items-center justify-between shadow-lg">
+      <div class="flex items-center gap-3">
+        <div class="relative">
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/25">
+            ⚡
+          </div>
+          <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-black tracking-tight">LifeOS</h1>
+            <span class="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">v2.5 PRO</span>
+          </div>
+          <p class="text-xs text-slate-400 flex items-center gap-1.5">
+            <span x-text="currentDateDisplay"></span>
+            <span>•</span>
+            <span class="text-emerald-400 font-semibold" x-text="streakCount + ' ' + t('streakDays')"></span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Language Switcher -->
+        <button 
+          @click="toggleLang()" 
+          class="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-semibold flex items-center gap-1.5 transition">
+          <span class="text-base" x-text="currentLang === 'ar' ? '🌐' : '🌍'"></span>
+          <span class="hidden sm:inline" x-text="currentLang === 'ar' ? 'English' : 'العربية'"></span>
+        </button>
+
+        <!-- Currency Selector -->
+        <select 
+          x-model="selectedCurrency" 
+          @change="playChime()" 
+          class="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-mono font-semibold transition cursor-pointer">
+          <option value="EGP">EGP ج.م</option>
+          <option value="USD">USD $</option>
+          <option value="EUR">EUR €</option>
+          <option value="SAR">SAR ر.س</option>
+          <option value="AED">AED د.إ</option>
+          <option value="GBP">GBP £</option>
+        </select>
+
+        <!-- Sound FX Toggle -->
+        <button 
+          @click="soundEnabled = !soundEnabled; playClick()" 
+          :class="soundEnabled ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' : 'text-slate-500 bg-white/5 border-white/5'"
+          class="p-2 rounded-xl border transition" 
+          :title="soundEnabled ? t('muteSound') : t('enableSound')">
+          <svg x-show="soundEnabled" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+          <svg x-show="!soundEnabled" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
+        </button>
+
+        <!-- Dark/Light Theme -->
+        <button 
+          @click="toggleTheme()" 
+          class="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-amber-400 transition" 
+          title="Toggle Theme">
+          <svg x-show="isDark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <svg x-show="!isDark" class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+        </button>
+
+        <!-- Lock App -->
+        <button 
+          @click="lockApp()" 
+          class="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition"
+          :title="t('lockNow')">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Top Navigation Tabs (Desktop & Tablet) -->
+    <nav class="hidden md:flex glass-panel p-1.5 rounded-2xl mb-6 shadow-sm">
+      <button 
+        @click="setTab('dashboard')" 
+        :class="activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'" 
+        class="flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+        <span x-text="t('tabLifeMatrix')"></span>
+      </button>
+
+      <button 
+        @click="setTab('journal')" 
+        :class="activeTab === 'journal' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'" 
+        class="flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        <span x-text="t('tabJournal')"></span>
+      </button>
+
+      <button 
+        @click="setTab('finance')" 
+        :class="activeTab === 'finance' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'" 
+        class="flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span x-text="t('tabFinance')"></span>
+      </button>
+
+      <button 
+        @click="setTab('analytics')" 
+        :class="activeTab === 'analytics' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'" 
+        class="flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <span x-text="t('tabAnalytics')"></span>
+      </button>
+
+      <button 
+        @click="setTab('settings')" 
+        :class="activeTab === 'settings' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'" 
+        class="flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span x-text="t('tabSettings')"></span>
+      </button>
+    </nav>
+
+    <!-- TAB 1: LIFE MATRIX DASHBOARD -->
+    <main x-show="activeTab === 'dashboard'" class="space-y-6">
+      
+      <!-- Top Metrics Bar -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- Net Wealth -->
+        <div class="glass-panel p-4 rounded-2xl relative overflow-hidden group">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-xs text-slate-400" x-text="t('netBalance')"></span>
+            <span class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">💰</span>
+          </div>
+          <div class="text-xl sm:text-2xl font-black font-mono tracking-tight" :class="netBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'" x-text="formatCurrency(netBalance)"></div>
+          <div class="mt-2 flex items-center gap-1.5 text-[11px] text-slate-400">
+            <span x-text="t('savingsRate')"></span>:
+            <span class="font-bold text-indigo-400" x-text="savingsRate + '%'"></span>
+          </div>
+          <div class="absolute -right-6 -bottom-6 w-20 h-20 bg-emerald-500/5 rounded-full blur-xl group-hover:scale-150 transition"></div>
+        </div>
+
+        <!-- Today Mood Matrix -->
+        <div class="glass-panel p-4 rounded-2xl relative overflow-hidden group">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-xs text-slate-400" x-text="t('todayVibe')"></span>
+            <span class="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400">🎭</span>
+          </div>
+          <div class="text-xl sm:text-2xl font-black flex items-center gap-2">
+            <span x-text="todayJournal ? todayJournal.moodEmoji : '✨'"></span>
+            <span class="text-sm font-bold text-slate-300" x-text="todayJournal ? t(todayJournal.moodTag) : t('notLogged')"></span>
+          </div>
+          <div class="mt-2 text-[11px] text-slate-400">
+            <span x-text="journals.length + ' ' + t('totalMemories')"></span>
+          </div>
+        </div>
+
+        <!-- Monthly Spent vs Budget -->
+        <div class="glass-panel p-4 rounded-2xl relative overflow-hidden group">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-xs text-slate-400" x-text="t('monthlyBudget')"></span>
+            <span class="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400">🎯</span>
+          </div>
+          <div class="text-xl sm:text-2xl font-black font-mono tracking-tight text-cyan-400" x-text="formatCurrency(currentMonthExpenseTotal)"></div>
+          <div class="mt-2 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+            <div 
+              class="h-full rounded-full transition-all duration-500"
+              :class="budgetUsagePercent > 100 ? 'bg-rose-500' : (budgetUsagePercent > 80 ? 'bg-amber-500' : 'bg-cyan-500')"
+              :style="`width: ${Math.min(budgetUsagePercent, 100)}%`">
+            </div>
+          </div>
+          <div class="mt-1 flex justify-between text-[10px] text-slate-400">
+            <span x-text="budgetUsagePercent + '% ' + t('used')"></span>
+            <span x-text="formatCurrency(monthlyBudgetLimit)"></span>
+          </div>
+        </div>
+
+        <!-- Life Streak & Zen Score -->
+        <div class="glass-panel p-4 rounded-2xl relative overflow-hidden group">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-xs text-slate-400" x-text="t('zenDiscipline')"></span>
+            <span class="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">🔥</span>
+          </div>
+          <div class="text-xl sm:text-2xl font-black font-mono text-amber-400 flex items-center gap-1.5">
+            <span x-text="streakCount"></span>
+            <span class="text-xs font-normal text-slate-400" x-text="t('dayStreak')"></span>
+          </div>
+          <div class="mt-2 flex items-center gap-1.5 text-[11px] text-emerald-400 font-semibold">
+            <span>🛡️</span>
+            <span x-text="t('badgeConsistency')"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Life Synergy Insight Banner -->
+      <div class="glass-panel rounded-3xl p-5 border border-indigo-500/20 glow-indigo relative overflow-hidden">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-2xl">
+              🧠
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="font-bold text-base" x-text="t('synergyEngineTitle')"></h3>
+                <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300">Live AI Insight</span>
+              </div>
+              <p class="text-xs sm:text-sm text-slate-300 mt-0.5" x-text="generateSynergyInsight()"></p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 self-end md:self-center">
+            <button 
+              @click="setTab('journal'); openNewEntryModal()" 
+              class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 active:scale-95 transition flex items-center gap-2">
+              <span>✍️</span>
+              <span x-text="t('quickLog')"></span>
+            </button>
+            <button 
+              @click="setTab('finance'); openNewTransactionModal()" 
+              class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition flex items-center gap-2">
+              <span>💸</span>
+              <span x-text="t('quickExpense')"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Dual Preview Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Recent Journal Highlights -->
+        <div class="glass-panel rounded-3xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm sm:text-base flex items-center gap-2">
+              <span>📖</span>
+              <span x-text="t('recentJournals')"></span>
+            </h3>
+            <button @click="setTab('journal')" class="text-xs text-indigo-400 hover:underline font-semibold" x-text="t('viewAll')"></button>
+          </div>
+
+          <div class="space-y-3">
+            <template x-for="item in journals.slice(0, 3)" :key="item.id">
+              <div 
+                @click="viewJournalEntry(item)" 
+                class="glass-card p-3.5 rounded-2xl cursor-pointer hover:border-indigo-500/40 transition group">
+                <div class="flex items-start justify-between mb-1.5">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xl" x-text="item.moodEmoji"></span>
+                    <h4 class="font-bold text-xs sm:text-sm text-slate-200 group-hover:text-indigo-400 transition" x-text="item.title"></h4>
+                  </div>
+                  <span class="text-[10px] text-slate-400 font-mono" x-text="formatDate(item.createdAt)"></span>
+                </div>
+                <p class="text-xs text-slate-400 line-clamp-2" x-text="item.content"></p>
+                <div class="mt-2 flex items-center gap-2">
+                  <span class="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-300 font-mono" x-text="'#' + item.moodTag"></span>
+                  <span x-show="item.location" class="text-[10px] text-slate-400 flex items-center gap-0.5">
+                    📍 <span x-text="item.location"></span>
+                  </span>
+                  <span x-show="item.isEncrypted" class="text-[10px] text-amber-400 flex items-center gap-0.5">
+                    🔒 <span x-text="t('private')"></span>
+                  </span>
+                </div>
+              </div>
+            </template>
+            <div x-show="journals.length === 0" class="text-center py-8 text-xs text-slate-500">
+              <span class="text-2xl block mb-2">🌿</span>
+              <span x-text="t('noJournalsYet')"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="glass-panel rounded-3xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm sm:text-base flex items-center gap-2">
+              <span>💳</span>
+              <span x-text="t('recentTransactions')"></span>
+            </h3>
+            <button @click="setTab('finance')" class="text-xs text-indigo-400 hover:underline font-semibold" x-text="t('viewAll')"></button>
+          </div>
+
+          <div class="space-y-2.5">
+            <template x-for="item in transactions.slice(0, 4)" :key="item.id">
+              <div class="glass-card p-3 rounded-2xl flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div 
+                    class="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
+                    :class="item.type === 'income' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'">
+                    <span x-text="getCategoryIcon(item.category)"></span>
+                  </div>
+                  <div>
+                    <h4 class="font-bold text-xs sm:text-sm text-slate-200" x-text="item.note || t(item.category)"></h4>
+                    <p class="text-[10px] text-slate-400" x-text="formatDate(item.date) + ' • ' + t(item.category)"></p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div 
+                    class="font-mono font-bold text-xs sm:text-sm"
+                    :class="item.type === 'income' ? 'text-emerald-400' : 'text-rose-400'"
+                    x-text="(item.type === 'income' ? '+' : '-') + ' ' + formatCurrency(item.amount)">
+                  </div>
+                  <span class="text-[9px] text-slate-400" x-text="item.paymentMethod"></span>
+                </div>
+              </div>
+            </template>
+            <div x-show="transactions.length === 0" class="text-center py-8 text-xs text-slate-500">
+              <span class="text-2xl block mb-2">💸</span>
+              <span x-text="t('noTransactionsYet')"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 2: HYPER-ADVANCED JOURNAL -->
+    <main x-show="activeTab === 'journal'" class="space-y-6">
+      
+      <!-- Journal Controls & Search Bar -->
+      <div class="glass-panel p-4 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-3">
+        <div class="flex-1 w-full flex items-center gap-2">
+          <div class="relative flex-1">
+            <input 
+              type="text" 
+              x-model="journalSearchQuery" 
+              :placeholder="t('searchJournalsPlaceholder')"
+              class="w-full bg-slate-900/60 border border-white/10 rounded-2xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+            <span class="absolute end-3 top-3 text-slate-400 text-xs">🔍</span>
+          </div>
+          <select 
+            x-model="journalMoodFilter" 
+            class="bg-slate-900/60 border border-white/10 rounded-2xl px-3 py-2.5 text-xs focus:outline-none cursor-pointer">
+            <option value="ALL" x-text="t('allMoods')"></option>
+            <option value="Grateful">🙏 Grateful</option>
+            <option value="Productive">⚡ Productive</option>
+            <option value="Calm">😌 Calm</option>
+            <option value="Stressed">🤯 Stressed</option>
+            <option value="Inspired">💡 Inspired</option>
+            <option value="Exhausted">😴 Exhausted</option>
+          </select>
+        </div>
+
+        <button 
+          @click="openNewEntryModal()" 
+          class="w-full md:w-auto px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 active:scale-95 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span x-text="t('newJournalEntry')"></span>
+        </button>
+      </div>
+
+      <!-- Journal Cards Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <template x-for="item in filteredJournals" :key="item.id">
+          <div class="glass-panel p-5 rounded-3xl space-y-3.5 relative overflow-hidden group hover:border-indigo-500/40 transition">
+            
+            <!-- Card Header -->
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <span class="text-3xl p-2 rounded-2xl bg-white/5 border border-white/5" x-text="item.moodEmoji"></span>
+                <div>
+                  <h3 class="font-black text-sm sm:text-base text-slate-100" x-text="item.title"></h3>
+                  <div class="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                    <span class="font-mono" x-text="formatDate(item.createdAt)"></span>
+                    <span>•</span>
+                    <span class="text-indigo-400 font-semibold" x-text="t(item.moodTag)"></span>
+                    <span x-show="item.weather" class="text-slate-400" x-text="'• ' + item.weather"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pin & Delete -->
+              <div class="flex items-center gap-1">
+                <button 
+                  @click="togglePinJournal(item.id)" 
+                  class="p-1.5 rounded-xl hover:bg-white/10 transition"
+                  :class="item.isPinned ? 'text-amber-400' : 'text-slate-500'">
+                  📌
+                </button>
+                <button 
+                  @click="deleteJournal(item.id)" 
+                  class="p-1.5 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Content Area (Privacy Blur Toggle) -->
+            <div 
+              class="relative rounded-2xl transition"
+              :class="item.isEncrypted && !unlockedEntries.includes(item.id) ? 'blur-sm select-none cursor-pointer' : ''"
+              @click="if(item.isEncrypted && !unlockedEntries.includes(item.id)) unlockSingleEntry(item.id)">
+              
+              <p class="text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line" x-text="item.content"></p>
+              
+              <!-- 3 Gratitudes Section -->
+              <div x-show="item.gratitudes && item.gratitudes.length > 0" class="mt-3 p-3 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                <span class="text-[10px] font-bold text-amber-300 uppercase tracking-wider block" x-text="t('gratitudeHighlight')"></span>
+                <template x-for="(g, idx) in item.gratitudes" :key="idx">
+                  <div class="text-[11px] text-slate-300 flex items-center gap-1.5">
+                    <span>✨</span>
+                    <span x-text="g"></span>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Attached Photo Preview -->
+              <div x-show="item.photo" class="mt-3 overflow-hidden rounded-2xl max-h-48 border border-white/10">
+                <img :src="item.photo" class="w-full h-full object-cover">
+              </div>
+
+              <!-- Privacy Lock Overlay -->
+              <div 
+                x-show="item.isEncrypted && !unlockedEntries.includes(item.id)" 
+                class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/60 rounded-2xl">
+                <span class="text-xl">🔒</span>
+                <span class="text-[11px] font-bold text-slate-200 mt-1" x-text="t('clickToUnlock')"></span>
+              </div>
+            </div>
+
+            <!-- Tags & Audio note indicator -->
+            <div class="flex items-center justify-between pt-2 border-t border-white/5 text-[11px]">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <template x-for="tag in item.tags" :key="tag">
+                  <span class="px-2 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-400 font-mono text-[10px]" x-text="'#' + tag"></span>
+                </template>
+                <span x-show="item.hasVoiceNote" class="text-[10px] text-emerald-400 flex items-center gap-1">
+                  🎙️ <span x-text="t('voiceNote')"></span>
+                </span>
+              </div>
+              <span x-show="item.location" class="text-slate-400 text-[10px]" x-text="'📍 ' + item.location"></span>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div x-show="filteredJournals.length === 0" class="text-center py-16 text-slate-500">
+        <span class="text-4xl block mb-3">📖</span>
+        <h4 class="font-bold text-sm" x-text="t('noEntriesFound')"></h4>
+        <p class="text-xs text-slate-400 mt-1" x-text="t('writeFirstMemory')"></p>
+      </div>
+    </main>
+
+    <!-- TAB 3: ELITE PERSONAL FINANCE -->
+    <main x-show="activeTab === 'finance'" class="space-y-6">
+      
+      <!-- Finance Header & Quick Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Total Income -->
+        <div class="glass-panel p-5 rounded-3xl border border-emerald-500/20 glow-emerald">
+          <span class="text-xs text-slate-400 flex items-center justify-between">
+            <span x-text="t('totalIncome')"></span>
+            <span class="text-emerald-400 font-bold">↗</span>
+          </span>
+          <div class="text-2xl font-black font-mono text-emerald-400 mt-1" x-text="formatCurrency(totalIncome)"></div>
+          <div class="mt-2 text-[10px] text-slate-400" x-text="t('incomeDescription')"></div>
+        </div>
+
+        <!-- Total Expenses -->
+        <div class="glass-panel p-5 rounded-3xl border border-rose-500/20 glow-rose">
+          <span class="text-xs text-slate-400 flex items-center justify-between">
+            <span x-text="t('totalExpenses')"></span>
+            <span class="text-rose-400 font-bold">↘</span>
+          </span>
+          <div class="text-2xl font-black font-mono text-rose-400 mt-1" x-text="formatCurrency(totalExpense)"></div>
+          <div class="mt-2 text-[10px] text-slate-400" x-text="t('expenseDescription')"></div>
+        </div>
+
+        <!-- Monthly Savings / Net -->
+        <div class="glass-panel p-5 rounded-3xl border border-indigo-500/20 glow-indigo">
+          <span class="text-xs text-slate-400 flex items-center justify-between">
+            <span x-text="t('netSavings')"></span>
+            <span class="text-indigo-400 font-bold">★</span>
+          </span>
+          <div class="text-2xl font-black font-mono text-indigo-400 mt-1" x-text="formatCurrency(netBalance)"></div>
+          <div class="mt-2 flex items-center justify-between text-[10px] text-slate-400">
+            <span x-text="t('savingsRate') + ': ' + savingsRate + '%'"></span>
+            <span class="text-emerald-400 font-bold" x-text="savingsRate >= 30 ? '🔥 On Track' : '⚡ Boost Goal'"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recurring Subscriptions & Fixed Bills Bar -->
+      <div class="glass-panel p-4 rounded-3xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-xs sm:text-sm flex items-center gap-2">
+            <span>🔄</span>
+            <span x-text="t('activeSubscriptions')"></span>
+          </h3>
+          <button 
+            @click="openRecurringModal()" 
+            class="text-xs text-indigo-400 hover:underline font-semibold" 
+            x-text="'+ ' + t('addSubscription')">
+          </button>
+        </div>
+
+        <div class="flex gap-3 overflow-x-auto pb-1 text-xs">
+          <template x-for="sub in subscriptions" :key="sub.id">
+            <div class="glass-card px-3.5 py-2.5 rounded-2xl flex items-center gap-3 shrink-0">
+              <span class="text-xl" x-text="sub.icon"></span>
+              <div>
+                <div class="font-bold text-slate-200" x-text="sub.name"></div>
+                <div class="text-[10px] text-slate-400 font-mono" x-text="formatCurrency(sub.amount) + ' / ' + t(sub.cycle)"></div>
+              </div>
+              <button @click="deleteSubscription(sub.id)" class="text-slate-500 hover:text-rose-400 text-xs ml-1">✕</button>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Action & Filter Bar -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <select 
+            x-model="financeFilterType" 
+            class="bg-slate-900/60 border border-white/10 rounded-2xl px-3 py-2 text-xs focus:outline-none">
+            <option value="ALL" x-text="t('allTransactions')"></option>
+            <option value="expense" x-text="t('expensesOnly')"></option>
+            <option value="income" x-text="t('incomeOnly')"></option>
+          </select>
+
+          <select 
+            x-model="financeCategoryFilter" 
+            class="bg-slate-900/60 border border-white/10 rounded-2xl px-3 py-2 text-xs focus:outline-none">
+            <option value="ALL" x-text="t('allCategories')"></option>
+            <option value="Food" x-text="t('Food')"></option>
+            <option value="Housing" x-text="t('Housing')"></option>
+            <option value="Tech" x-text="t('Tech')"></option>
+            <option value="Salary" x-text="t('Salary')"></option>
+            <option value="Investments" x-text="t('Investments')"></option>
+            <option value="Health" x-text="t('Health')"></option>
+            <option value="Leisure" x-text="t('Leisure')"></option>
+          </select>
+        </div>
+
+        <button 
+          @click="openNewTransactionModal()" 
+          class="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 active:scale-95 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span x-text="t('recordTransaction')"></span>
+        </button>
+      </div>
+
+      <!-- Transactions List -->
+      <div class="glass-panel p-4 rounded-3xl space-y-2">
+        <template x-for="item in filteredTransactions" :key="item.id">
+          <div class="glass-card p-3.5 rounded-2xl flex items-center justify-between hover:border-slate-600/50 transition group">
+            <div class="flex items-center gap-3.5">
+              <div 
+                class="w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0"
+                :class="item.type === 'income' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/15 text-rose-400 border border-rose-500/20'">
+                <span x-text="getCategoryIcon(item.category)"></span>
+              </div>
+              <div>
+                <h4 class="font-bold text-xs sm:text-sm text-slate-100" x-text="item.note || t(item.category)"></h4>
+                <div class="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
+                  <span class="font-mono" x-text="formatDate(item.date)"></span>
+                  <span>•</span>
+                  <span x-text="t(item.category)"></span>
+                  <span>•</span>
+                  <span class="px-1.5 py-0.2 rounded bg-white/5 text-slate-300" x-text="item.paymentMethod"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="text-right">
+                <div 
+                  class="font-mono font-bold text-xs sm:text-base tracking-tight"
+                  :class="item.type === 'income' ? 'text-emerald-400' : 'text-rose-400'"
+                  x-text="(item.type === 'income' ? '+' : '-') + ' ' + formatCurrency(item.amount)">
+                </div>
+              </div>
+              <button 
+                @click="deleteTransaction(item.id)" 
+                class="opacity-0 group-hover:opacity-100 p-1.5 text-slate-500 hover:text-rose-400 transition"
+                title="Delete">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          </div>
+        </template>
+        <div x-show="filteredTransactions.length === 0" class="text-center py-12 text-slate-500 text-xs">
+          <span class="text-3xl block mb-2">💸</span>
+          <span x-text="t('noTransactionsFound')"></span>
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 4: VISUAL ANALYTICS & CHARTS -->
+    <main x-show="activeTab === 'analytics'" class="space-y-6">
+      
+      <!-- Analytics Overview Banner -->
+      <div class="glass-panel p-5 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-black" x-text="t('financialBrain')"></h2>
+          <p class="text-xs text-slate-400" x-text="t('analyticsSubtitle')"></p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button 
+            @click="exportCSV()" 
+            class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold transition flex items-center gap-1.5">
+            <span>📊</span>
+            <span>CSV Export</span>
+          </button>
+          <button 
+            @click="window.print()" 
+            class="px-4 py-2 rounded-xl bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30 border border-indigo-500/30 text-xs font-bold transition flex items-center gap-1.5">
+            <span>🖨️</span>
+            <span x-text="t('printSummary')"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Monthly Cashflow Bar Chart -->
+        <div class="glass-panel p-5 rounded-3xl space-y-4">
+          <h3 class="font-bold text-sm flex items-center gap-2">
+            <span>📈</span>
+            <span x-text="t('cashflowAnalysis')"></span>
+          </h3>
+          <div class="h-64 relative">
+            <canvas id="cashflowChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Expense Category Breakdown Donut Chart -->
+        <div class="glass-panel p-5 rounded-3xl space-y-4">
+          <h3 class="font-bold text-sm flex items-center gap-2">
+            <span>🍩</span>
+            <span x-text="t('categoryBreakdown')"></span>
+          </h3>
+          <div class="h-64 relative flex items-center justify-center">
+            <canvas id="categoryDonutChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mood & Wealth Correlation Engine -->
+      <div class="glass-panel p-6 rounded-3xl border border-indigo-500/30 space-y-4">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl p-2 rounded-2xl bg-indigo-500/20 border border-indigo-500/30">🧠</span>
+          <div>
+            <h3 class="font-black text-sm sm:text-base" x-text="t('moodSpendingCorrelation')"></h3>
+            <p class="text-xs text-slate-400" x-text="t('moodCorrelationDescription')"></p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <div class="glass-card p-4 rounded-2xl text-center">
+            <span class="text-2xl block mb-1">🤯</span>
+            <span class="text-xs text-slate-400 font-semibold" x-text="t('Stressed')"></span>
+            <div class="text-sm font-bold font-mono text-rose-400 mt-1" x-text="getMoodSpendingAvg('Stressed')"></div>
+            <span class="text-[10px] text-slate-500 block mt-1" x-text="t('avgDailySpend')"></span>
+          </div>
+          <div class="glass-card p-4 rounded-2xl text-center">
+            <span class="text-2xl block mb-1">⚡</span>
+            <span class="text-xs text-slate-400 font-semibold" x-text="t('Productive')"></span>
+            <div class="text-sm font-bold font-mono text-emerald-400 mt-1" x-text="getMoodSpendingAvg('Productive')"></div>
+            <span class="text-[10px] text-slate-500 block mt-1" x-text="t('avgDailySpend')"></span>
+          </div>
+          <div class="glass-card p-4 rounded-2xl text-center">
+            <span class="text-2xl block mb-1">😌</span>
+            <span class="text-xs text-slate-400 font-semibold" x-text="t('Calm')"></span>
+            <div class="text-sm font-bold font-mono text-cyan-400 mt-1" x-text="getMoodSpendingAvg('Calm')"></div>
+            <span class="text-[10px] text-slate-500 block mt-1" x-text="t('avgDailySpend')"></span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 5: SETTINGS & BACKUP -->
+    <main x-show="activeTab === 'settings'" class="space-y-6">
+      
+      <!-- Security Preferences -->
+      <div class="glass-panel p-5 rounded-3xl space-y-4">
+        <h3 class="font-bold text-sm sm:text-base flex items-center gap-2">
+          <span>🛡️</span>
+          <span x-text="t('securityPreferences')"></span>
+        </h3>
+
+        <div class="space-y-3">
+          <div class="flex items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/5">
+            <div>
+              <div class="font-bold text-xs sm:text-sm text-slate-200" x-text="t('changePinCode')"></div>
+              <div class="text-[11px] text-slate-400" x-text="t('currentPinHint')"></div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input 
+                type="password" 
+                maxlength="4" 
+                x-model="newPinInput" 
+                placeholder="1234"
+                class="w-20 bg-slate-900 border border-white/10 rounded-xl px-2.5 py-1.5 text-center font-mono text-xs">
+              <button 
+                @click="updatePin()" 
+                class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition" 
+                x-text="t('save')">
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/5">
+            <div>
+              <div class="font-bold text-xs sm:text-sm text-slate-200" x-text="t('monthlyBudgetLimit')"></div>
+              <div class="text-[11px] text-slate-400" x-text="t('budgetWarningNotice')"></div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input 
+                type="number" 
+                x-model.number="monthlyBudgetLimit" 
+                @change="saveSettings()"
+                class="w-28 bg-slate-900 border border-white/10 rounded-xl px-2.5 py-1.5 text-center font-mono text-xs">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Sovereignty & Backup -->
+      <div class="glass-panel p-5 rounded-3xl space-y-4">
+        <h3 class="font-bold text-sm sm:text-base flex items-center gap-2">
+          <span>💾</span>
+          <span x-text="t('dataSovereignty')"></span>
+        </h3>
+        <p class="text-xs text-slate-400" x-text="t('dataSovereigntyDesc')"></p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <!-- JSON Export -->
+          <button 
+            @click="exportJSONBackup()" 
+            class="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-start transition flex items-center gap-3">
+            <span class="text-2xl">📦</span>
+            <div>
+              <div class="font-bold text-xs sm:text-sm text-slate-200" x-text="t('exportFullBackup')"></div>
+              <div class="text-[10px] text-slate-400" x-text="t('exportJSONHint')"></div>
+            </div>
+          </button>
+
+          <!-- JSON Restore -->
+          <label class="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-start transition flex items-center gap-3 cursor-pointer">
+            <span class="text-2xl">📥</span>
+            <div>
+              <div class="font-bold text-xs sm:text-sm text-slate-200" x-text="t('importRestoreBackup')"></div>
+              <div class="text-[10px] text-slate-400" x-text="t('importJSONHint')"></div>
+            </div>
+            <input type="file" accept=".json" @change="importJSONBackup($event)" class="hidden">
+          </label>
+        </div>
+
+        <!-- Factory Reset -->
+        <div class="pt-4 border-t border-white/5 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-xs text-rose-400" x-text="t('dangerZone')"></div>
+            <div class="text-[10px] text-slate-400" x-text="t('wipeAllDataNotice')"></div>
+          </div>
+          <button 
+            @click="factoryResetData()" 
+            class="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-bold transition">
+            <span x-text="t('wipeEverything')"></span>
+          </button>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Mobile Bottom Navigation Bar (App Feel) -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 glass-panel border-t border-white/10 px-3 py-2 pb-safe flex justify-around items-center">
+    <button 
+      @click="setTab('dashboard')" 
+      :class="activeTab === 'dashboard' ? 'text-indigo-400 scale-105' : 'text-slate-400'"
+      class="flex flex-col items-center gap-1 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+      <span class="text-[10px] font-bold" x-text="t('navMatrix')"></span>
+    </button>
+
+    <button 
+      @click="setTab('journal')" 
+      :class="activeTab === 'journal' ? 'text-indigo-400 scale-105' : 'text-slate-400'"
+      class="flex flex-col items-center gap-1 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      <span class="text-[10px] font-bold" x-text="t('navJournal')"></span>
+    </button>
+
+    <!-- Center Floating Action Button -->
+    <div class="relative -top-4">
+      <button 
+        @click="openQuickCreateMenu()" 
+        class="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-600 to-cyan-400 text-white flex items-center justify-center text-xl shadow-lg shadow-indigo-600/40 active:scale-95 transition">
+        ➕
+      </button>
+    </div>
+
+    <button 
+      @click="setTab('finance')" 
+      :class="activeTab === 'finance' ? 'text-indigo-400 scale-105' : 'text-slate-400'"
+      class="flex flex-col items-center gap-1 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="text-[10px] font-bold" x-text="t('navWealth')"></span>
+    </button>
+
+    <button 
+      @click="setTab('analytics')" 
+      :class="activeTab === 'analytics' ? 'text-indigo-400 scale-105' : 'text-slate-400'"
+      class="flex flex-col items-center gap-1 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      <span class="text-[10px] font-bold" x-text="t('navCharts')"></span>
+    </button>
+  </nav>
+
+  <!-- MODAL 1: NEW JOURNAL ENTRY -->
+  <div 
+    x-show="showJournalModal" 
+    x-transition.opacity
+    class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-md">
+    
+    <div 
+      @click.outside="showJournalModal = false"
+      class="glass-panel w-full max-w-lg rounded-3xl p-5 sm:p-6 shadow-2xl border border-white/10 max-h-[90vh] overflow-y-auto space-y-4">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-white/5">
+        <h3 class="font-black text-base sm:text-lg flex items-center gap-2">
+          <span>✍️</span>
+          <span x-text="t('createMemoryTitle')"></span>
+        </h3>
+        <button @click="showJournalModal = false" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <!-- Mood Emotion Wheel Selector -->
+      <div class="space-y-1.5">
+        <label class="text-xs text-slate-300 font-semibold" x-text="t('chooseMood')"></label>
+        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          <template x-for="m in moodOptions" :key="m.tag">
+            <button 
+              type="button" 
+              @click="entryForm.moodEmoji = m.emoji; entryForm.moodTag = m.tag; playClick()"
+              :class="entryForm.moodTag === m.tag ? 'bg-indigo-600 text-white border-indigo-400 scale-105 shadow-md' : 'bg-white/5 text-slate-300 border-white/5'"
+              class="p-2 rounded-2xl border text-center transition flex flex-col items-center gap-1">
+              <span class="text-2xl" x-text="m.emoji"></span>
+              <span class="text-[10px] font-bold" x-text="t(m.tag)"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <!-- Title Input -->
+      <div>
+        <label class="text-xs text-slate-300 font-semibold block mb-1" x-text="t('entryTitle')"></label>
+        <input 
+          type="text" 
+          x-model="entryForm.title" 
+          placeholder="e.g. A breakthrough on my project..." 
+          class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+      </div>
+
+      <!-- Content Area -->
+      <div>
+        <label class="text-xs text-slate-300 font-semibold block mb-1" x-text="t('entryContent')"></label>
+        <textarea 
+          rows="4" 
+          x-model="entryForm.content" 
+          placeholder="Write your raw thoughts, reflection and lessons..." 
+          class="w-full bg-slate-900 border border-white/10 rounded-2xl p-4 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"></textarea>
+      </div>
+
+      <!-- 3 Gratitude Prompts -->
+      <div class="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+        <label class="text-xs font-bold text-amber-300 flex items-center gap-1">
+          <span>✨</span>
+          <span x-text="t('gratitudePromptsTitle')"></span>
+        </label>
+        <input 
+          type="text" 
+          x-model="entryForm.gratitude1" 
+          placeholder="1. Something small that brought peace..." 
+          class="w-full bg-slate-900/70 border border-white/5 rounded-xl px-3 py-1.5 text-xs">
+        <input 
+          type="text" 
+          x-model="entryForm.gratitude2" 
+          placeholder="2. A person I'm thankful for today..." 
+          class="w-full bg-slate-900/70 border border-white/5 rounded-xl px-3 py-1.5 text-xs">
+        <input 
+          type="text" 
+          x-model="entryForm.gratitude3" 
+          placeholder="3. An obstacle I overcame..." 
+          class="w-full bg-slate-900/70 border border-white/5 rounded-xl px-3 py-1.5 text-xs">
+      </div>
+
+      <!-- Weather & Location & Tags -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-slate-300 font-semibold block mb-1" x-text="t('location')"></label>
+          <input 
+            type="text" 
+            x-model="entryForm.location" 
+            placeholder="Cairo / Home Studio" 
+            class="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs">
+        </div>
+        <div>
+          <label class="text-xs text-slate-300 font-semibold block mb-1" x-text="t('weather')"></label>
+          <input 
+            type="text" 
+            x-model="entryForm.weather" 
+            placeholder="☀️ 26°C Clear" 
+            class="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs">
+        </div>
+      </div>
+
+      <!-- Photo Upload & Lock Toggle -->
+      <div class="flex items-center justify-between pt-2">
+        <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 hover:text-white">
+          <span>📷</span>
+          <span x-text="entryForm.photo ? t('photoAttached') : t('attachPhoto')"></span>
+          <input type="file" accept="image/*" @change="handlePhotoUpload($event)" class="hidden">
+        </label>
+
+        <label class="flex items-center gap-2 cursor-pointer text-xs text-amber-300 font-semibold">
+          <input type="checkbox" x-model="entryForm.isEncrypted" class="rounded bg-slate-900 border-white/10">
+          <span x-text="t('encryptThisEntry')"></span>
+        </label>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-white/5">
+        <button 
+          @click="showJournalModal = false" 
+          class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold">
+          <span x-text="t('cancel')"></span>
+        </button>
+        <button 
+          @click="saveJournalEntry()" 
+          class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30">
+          <span x-text="t('saveEntry')"></span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 2: NEW TRANSACTION -->
+  <div 
+    x-show="showTransactionModal" 
+    x-transition.opacity
+    class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-md">
+    
+    <div 
+      @click.outside="showTransactionModal = false"
+      class="glass-panel w-full max-w-md rounded-3xl p-5 sm:p-6 shadow-2xl border border-white/10 space-y-4">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-white/5">
+        <h3 class="font-black text-base sm:text-lg flex items-center gap-2">
+          <span>💰</span>
+          <span x-text="t('recordTransaction')"></span>
+        </h3>
+        <button @click="showTransactionModal = false" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <!-- Type Switcher (Income vs Expense) -->
+      <div class="grid grid-cols-2 gap-2 bg-slate-900/60 p-1.5 rounded-2xl border border-white/5">
+        <button 
+          @click="txForm.type = 'expense'; playClick()" 
+          :class="txForm.type === 'expense' ? 'bg-rose-600 text-white font-bold shadow-md' : 'text-slate-400'"
+          class="py-2 rounded-xl text-xs font-semibold transition">
+          💸 <span x-text="t('expense')"></span>
+        </button>
+        <button 
+          @click="txForm.type = 'income'; playClick()" 
+          :class="txForm.type === 'income' ? 'bg-emerald-600 text-white font-bold shadow-md' : 'text-slate-400'"
+          class="py-2 rounded-xl text-xs font-semibold transition">
+          📈 <span x-text="t('income')"></span>
+        </button>
+      </div>
+
+      <!-- Amount Input -->
+      <div>
+        <label class="text-xs text-slate-300 font-semibold block mb-1" x-text="t('amount')"></label>
+        <div class="relative">
+          <input 
+            type="number" 
+            step="any"
+            x-model.number="txForm.amount" 
+            placeholder="0.00" 
+            class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3 text-lg font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+          <span class="absolute end-4 top-3.5 text-xs font-mono text-slate-400" x-text="selectedCurrency"></span>
+        </div>
+      </div>
+
+      <!-- Category Selector -->
+      <div>
+        <label class="text-xs text-slate-300 font-semibold block mb-1" x-text="t('category')"></label>
+        <select 
+          x-model="txForm.category" 
+          class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none">
+          <option value="Food">🍔 Food & Dining</option>
+          <option value="Housing">🏠 Housing & Utilities</option>
+          <option value="Tech">💻 Tech & Subscriptions</option>
+          <option value="Salary">💼 Salary & Wages</option>
+          <option value="Investments">📈 Stocks & Crypto</option>
+          <option value="Health">🩺 Health & Fitness</option>
+          <option value="Leisure">🎮 Leisure & Travel</option>
+        </select>
+      </div>
+
+      <!-- Note / Description -->
+      <div>
+        <label class="text-xs text-slate-300 font-semibold block mb-1" x-text="t('description')"></label>
+        <input 
+          type="text" 
+          x-model="txForm.note" 
+          placeholder="e.g. Organic Groceries or Client invoice..." 
+          class="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-2.5 text-xs focus:outline-none">
+      </div>
+
+      <!-- Payment Method -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-slate-300 font-semibold block mb-1" x-text="t('paymentMethod')"></label>
+          <select 
+            x-model="txForm.paymentMethod" 
+            class="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none">
+            <option value="Card">💳 Credit/Debit Card</option>
+            <option value="Cash">💵 Cash</option>
+            <option value="Bank">🏦 Bank Transfer</option>
+            <option value="Crypto">🪙 Crypto Wallet</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-300 font-semibold block mb-1" x-text="t('date')"></label>
+          <input 
+            type="date" 
+            x-model="txForm.date" 
+            class="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-white/5">
+        <button 
+          @click="showTransactionModal = false" 
+          class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold">
+          <span x-text="t('cancel')"></span>
+        </button>
+        <button 
+          @click="saveTransaction()" 
+          class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30">
+          <span x-text="t('confirmTransaction')"></span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Audio Chimes & Synthesis Script -->
+  <script>
+    // Web Audio Synthesizer (No external sound assets needed)
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+      }
+      playTone(freq, type = 'sine', duration = 0.08, gainVal = 0.06) {
+        try {
+          this.init();
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {}
+      }
+      click() {
+        this.playTone(800, 'sine', 0.04, 0.04);
+      }
+      chime() {
+        this.playTone(523.25, 'triangle', 0.12, 0.08);
+        setTimeout(() => this.playTone(659.25, 'triangle', 0.16, 0.08), 80);
+      }
+      success() {
+        this.playTone(440, 'sine', 0.1, 0.06);
+        setTimeout(() => this.playTone(554.37, 'sine', 0.1, 0.06), 90);
+        setTimeout(() => this.playTone(659.25, 'sine', 0.25, 0.08), 180);
+      }
+    }
+    const audioSynth = new SoundFX();
+
+    // Multilingual Dictionary
+    const i18n = {
+      ar: {
+        securityMasterLock: "نظام الحماية والأمان",
+        enterPinPrompt: "أدخل رمز PIN للدخول إلى مساحة حياتك الخاصة",
+        defaultPinHint: "الرمز الافتراضي للتجربة",
+        streakDays: "أيام التزام متتالية",
+        netBalance: "صافي الثروة المتاحة",
+        savingsRate: "معدل الادخار",
+        todayVibe: "طاقة ومزاج اليوم",
+        totalMemories: "تدوينات محفوظة",
+        monthlyBudget: "ميزانية الشهر المستهدفة",
+        used: "مستهلك",
+        zenDiscipline: "مؤشر الانضباط اليومي",
+        dayStreak: "يوم متواصل",
+        badgeConsistency: "مستوى الالتزام: أسطوري",
+        synergyEngineTitle: "محرك التآزر: الترابط بين المزاج والمال",
+        quickLog: "تدوين فوري",
+        quickExpense: "تسجيل صرف",
+        recentJournals: "أحدث المذكرات اليومية",
+        viewAll: "عرض الكل",
+        recentTransactions: "المعاملات المالية الأخيرة",
+        notLogged: "لم يسجل بعد",
+        tabLifeMatrix: "مصفوفة الحياة",
+        tabJournal: "اليوميات والمزاج",
+        tabFinance: "إدارة الثروة",
+        tabAnalytics: "التحليلات والذكاء",
+        tabSettings: "الإعدادات والنسخ",
+        navMatrix: "المصفوفة",
+        navJournal: "اليوميات",
+        navWealth: "المالية",
+        navCharts: "التحليل",
+        searchJournalsPlaceholder: "بحث في المذكرات، الهاشتاجات، الأماكن...",
+        allMoods: "كل الحالات المزاجية",
+        newJournalEntry: "تدوينة جديدة +",
+        gratitudeHighlight: "لحظات الامتنان اليومية",
+        clickToUnlock: "اضغط لإلغاء القفل وعرض المذكرات",
+        voiceNote: "تسجيل صوتي",
+        totalIncome: "إجمالي الدخل المتراكم",
+        totalExpenses: "إجمالي المصروفات",
+        incomeDescription: "التدفقات النقدية الواردة",
+        expenseDescription: "التدفقات النقدية الصادرة",
+        netSavings: "الفائض النقدي الصافي",
+        activeSubscriptions: "الاشتراكات الدورية والفواتير",
+        addSubscription: "إضافة اشتراك",
+        allTransactions: "كل المعاملات",
+        expensesOnly: "المصروفات فقط",
+        incomeOnly: "الدخل فقط",
+        allCategories: "كل التصنيفات",
+        recordTransaction: "تسجيل معاملة +",
+        financialBrain: "العقل المالي والتحليل البصري",
+        analyticsSubtitle: "رسوم تفاعلية لكشف سلوك الإنفاق وارتباطه بطاقتك النفسية",
+        printSummary: "طباعة التقرير",
+        cashflowAnalysis: "مقارنة الدخل والمصروفات الشهرية",
+        categoryBreakdown: "توزيع المصروفات حسب الأقسام",
+        moodSpendingCorrelation: "تحليل إنفاقك حسب حالتك المزاجية",
+        moodCorrelationDescription: "متوسط الصرف في الأيام التي كنت فيها في كل حالة نفسية",
+        avgDailySpend: "متوسط الإنفاق باليوم",
+        securityPreferences: "إعدادات الأمان والقفل",
+        changePinCode: "تعديل رمز PIN الشخصي",
+        currentPinHint: "رمز الدخول للتطبيق والمذكرات المشفرة",
+        save: "حفظ",
+        monthlyBudgetLimit: "الحد الأقصى للميزانية الشهرية",
+        budgetWarningNotice: "تنبيه تلقائي عند الاقتراب من الحد",
+        dataSovereignty: "سيادة البيانات والنسخ الاحتياطي",
+        dataSovereigntyDesc: "بياناتك مشفرة ومحفوظة على جهازك فقط. يمكنك أخذ نسخة كاملة بأي وقت.",
+        exportFullBackup: "تصدير نسخة احتياطية (JSON)",
+        exportJSONHint: "حفظ كل المذكرات والمصاريف بملف واحد",
+        importRestoreBackup: "استيراد نسخة احتياطية",
+        importJSONHint: "استرجاع بياناتك من ملف JSON سابق",
+        dangerZone: "منطقة الخطر",
+        wipeAllDataNotice: "حذف جميع البيانات وتصفير التطبيق نهائياً",
+        wipeEverything: "مسح شامل وإعادة ضبط",
+        createMemoryTitle: "تدوين لحظة جديدة في مذكراتك",
+        chooseMood: "كيف تشعر الآن؟",
+        entryTitle: "عنوان التدوينة",
+        entryContent: "اكتب أفكارك وما تعلمته اليوم...",
+        gratitudePromptsTitle: "3 أشياء تشعر بالامتنان لوجودها اليوم",
+        location: "المكان",
+        weather: "الطقس",
+        photoAttached: "تم إرفاق صورة ✓",
+        attachPhoto: "إرفاق صورة",
+        encryptThisEntry: "تشفير هذه المذكرة برقم سري",
+        cancel: "إلغاء",
+        saveEntry: "حفظ في السجل",
+        expense: "مصروف",
+        income: "دخل",
+        amount: "المبلغ",
+        category: "التصنيف",
+        description: "الوصف",
+        paymentMethod: "طريقة الدفع",
+        date: "التاريخ",
+        confirmTransaction: "تأكيد وإضافة",
+        lockNow: "قفل التطبيق الآن",
+        enableSound: "تشغيل المؤثرات الصوتية",
+        muteSound: "كتم الصوت",
+        Food: "طعام وغذاء",
+        Housing: "سكن وفواتير",
+        Tech: "تقنية واشتراكات",
+        Salary: "راتب شهري",
+        Investments: "استثمارات",
+        Health: "صحة ولياقة",
+        Leisure: "ترفيه وسفر",
+        Grateful: "شاكر وممتن",
+        Productive: "في قمة الإنجاز",
+        Calm: "هادئ ومرتاح",
+        Stressed: "مضغوط ومرهق",
+        Inspired: "متحمس وملهم",
+        Exhausted: "منهك وبحاجة راحة",
+        noJournalsYet: "لا توجد مذكرات مدونة حتى الآن",
+        noTransactionsYet: "لم تقم بتسجيل أي معاملات بعد",
+        noEntriesFound: "لم يتم العثور على مذكرات مطابقة",
+        noTransactionsFound: "لا توجد معاملات مسجلة في هذا القسم",
+        writeFirstMemory: "ابدأ بتدوين أول لحظة لتفعيل تحليلاتك",
+        private: "مشفرة"
+      },
+      en: {
+        securityMasterLock: "Security Master Lock",
+        enterPinPrompt: "Enter your Master PIN to access your LifeOS space",
+        defaultPinHint: "Default Demo PIN",
+        streakDays: "Days Journaling Streak",
+        netBalance: "Net Available Wealth",
+        savingsRate: "Savings Rate",
+        todayVibe: "Today's Mood & Energy",
+        totalMemories: "Logged Memories",
+        monthlyBudget: "Target Monthly Budget",
+        used: "Used",
+        zenDiscipline: "Discipline & Zen Score",
+        dayStreak: "Day Streak",
+        badgeConsistency: "Consistency Tier: Mythic",
+        synergyEngineTitle: "Life Synergy Engine: Mood & Capital",
+        quickLog: "Quick Log",
+        quickExpense: "Log Spend",
+        recentJournals: "Recent Journal Highlights",
+        viewAll: "View All",
+        recentTransactions: "Recent Capital Flows",
+        notLogged: "Not logged yet",
+        tabLifeMatrix: "Life Matrix",
+        tabJournal: "Journal & Mood",
+        tabFinance: "Wealth OS",
+        tabAnalytics: "Intelligence",
+        tabSettings: "Settings & Backup",
+        navMatrix: "Matrix",
+        navJournal: "Journal",
+        navWealth: "Wealth",
+        navCharts: "Charts",
+        searchJournalsPlaceholder: "Search journals, hashtags, places...",
+        allMoods: "All Mood Vibes",
+        newJournalEntry: "New Memory +",
+        gratitudeHighlight: "Daily Gratitude Core",
+        clickToUnlock: "Click to authenticate & view",
+        voiceNote: "Voice Note",
+        totalIncome: "Cumulative Income",
+        totalExpenses: "Total Expenses",
+        incomeDescription: "Inflow Liquidity",
+        expenseDescription: "Outflow Liquidity",
+        netSavings: "Net Cash Surplus",
+        activeSubscriptions: "Recurring Subscriptions",
+        addSubscription: "Add Plan",
+        allTransactions: "All Transactions",
+        expensesOnly: "Expenses Only",
+        incomeOnly: "Income Only",
+        allCategories: "All Categories",
+        recordTransaction: "Record Transaction +",
+        financialBrain: "Financial Brain & Visual OS",
+        analyticsSubtitle: "Interactive charts correlating expenditure with your psychological state",
+        printSummary: "Print Report",
+        cashflowAnalysis: "Cashflow Comparison",
+        categoryBreakdown: "Expense Category Matrix",
+        moodSpendingCorrelation: "Mood vs. Spending Correlation",
+        moodCorrelationDescription: "Average spending on days you registered each emotional state",
+        avgDailySpend: "Avg. Daily Spend",
+        securityPreferences: "Security & Biometric Preferences",
+        changePinCode: "Change Security PIN",
+        currentPinHint: "Master code for App and Encrypted Entries",
+        save: "Save",
+        monthlyBudgetLimit: "Monthly Budget Limit",
+        budgetWarningNotice: "Proactive alert when approaching cap",
+        dataSovereignty: "Data Sovereignty & Local Storage",
+        dataSovereigntyDesc: "All data stays securely on your device. Never transmitted to third-party clouds.",
+        exportFullBackup: "Export Full Backup (JSON)",
+        exportJSONHint: "Download all journal entries and financial records",
+        importRestoreBackup: "Import & Restore Backup",
+        importJSONHint: "Restore LifeOS database from a backup JSON",
+        dangerZone: "Danger Zone",
+        wipeAllDataNotice: "Permanently purge all data from this device",
+        wipeEverything: "Factory Reset",
+        createMemoryTitle: "Log a New Life Memory",
+        chooseMood: "How is your spirit today?",
+        entryTitle: "Entry Headline",
+        entryContent: "Unfiltered thoughts, lessons & breakthroughs...",
+        gratitudePromptsTitle: "3 Things You are Deeply Grateful For",
+        location: "Location",
+        weather: "Weather",
+        photoAttached: "Photo Attached ✓",
+        attachPhoto: "Attach Snapshot",
+        encryptThisEntry: "PIN Encrypt This Entry",
+        cancel: "Cancel",
+        saveEntry: "Commit to Vault",
+        expense: "Expense",
+        income: "Income",
+        amount: "Amount",
+        category: "Category",
+        description: "Description",
+        paymentMethod: "Payment Method",
+        date: "Date",
+        confirmTransaction: "Commit Transaction",
+        lockNow: "Lock Vault Now",
+        enableSound: "Enable Audio FX",
+        muteSound: "Mute Sound",
+        Food: "Food & Dining",
+        Housing: "Housing & Living",
+        Tech: "Tech & SaaS",
+        Salary: "Salary & Wages",
+        Investments: "Investments & Crypto",
+        Health: "Health & Fitness",
+        Leisure: "Leisure & Travel",
+        Grateful: "Grateful",
+        Productive: "Hyper Productive",
+        Calm: "Calm & Centered",
+        Stressed: "Stressed & Overloaded",
+        Inspired: "Inspired & Creative",
+        Exhausted: "Exhausted & Drained",
+        noJournalsYet: "No memories logged yet",
+        noTransactionsYet: "No capital transactions recorded",
+        noEntriesFound: "No entries match your search",
+        noTransactionsFound: "No records found in this category",
+        writeFirstMemory: "Log your first entry to activate analytics",
+        private: "Encrypted"
+      }
+    };
+
+    // Alpine.js Application Core Logic
+    function lifeOS() {
+      return {
+        // App State
+        isDark: true,
+        currentLang: localStorage.getItem('lifeos_lang') || 'ar',
+        activeTab: 'dashboard',
+        isLocked: false,
+        masterPin: localStorage.getItem('lifeos_pin') || '1234',
+        enteredPin: '',
+        soundEnabled: true,
+        selectedCurrency: localStorage.getItem('lifeos_currency') || 'EGP',
+        monthlyBudgetLimit: parseFloat(localStorage.getItem('lifeos_budget') || '15000'),
+        newPinInput: '',
+        
+        // Modals
+        showJournalModal: false,
+        showTransactionModal: false,
+        showRecurringModal: false,
+        unlockedEntries: [],
+
+        // Filter / Search
+        journalSearchQuery: '',
+        journalMoodFilter: 'ALL',
+        financeFilterType: 'ALL',
+        financeCategoryFilter: 'ALL',
+
+        // Form Bindings
+        entryForm: {
+          title: '',
+          content: '',
+          moodEmoji: '⚡',
+          moodTag: 'Productive',
+          gratitude1: '',
+          gratitude2: '',
+          gratitude3: '',
+          location: '',
+          weather: '',
+          photo: null,
+          isEncrypted: false,
+          hasVoiceNote: false
+        },
+
+        txForm: {
+          type: 'expense',
+          amount: '',
+          category: 'Food',
+          note: '',
+          paymentMethod: 'Card',
+          date: new Date().toISOString().split('T')[0]
+        },
+
+        moodOptions: [
+          { emoji: '🙏', tag: 'Grateful' },
+          { emoji: '⚡', tag: 'Productive' },
+          { emoji: '😌', tag: 'Calm' },
+          { emoji: '🤯', tag: 'Stressed' },
+          { emoji: '💡', tag: 'Inspired' },
+          { emoji: '😴', tag: 'Exhausted' }
+        ],
+
+        // Persistent Data
+        journals: [],
+        transactions: [],
+        subscriptions: [],
+
+        // Translation Helper
+        t(key) {
+          const dict = i18n[this.currentLang] || i18n.en;
+          return dict[key] !== undefined ? dict[key] : key;
+        },
+
+        // Sound helpers
+        playClick() { if (this.soundEnabled) audioSynth.click(); },
+        playChime() { if (this.soundEnabled) audioSynth.chime(); },
+        playSuccess() { if (this.soundEnabled) audioSynth.success(); },
+
+        initApp() {
+          // Non-reactive chart registry to prevent Alpine proxy interference
+          window._lifeOSCharts = {
+            cashflow: null,
+            category: null
+          };
+
+          // Load Storage
+          this.loadStorage();
+
+          // Auto-seed if empty for instant visual brilliance
+          if (this.journals.length === 0 && this.transactions.length === 0) {
+            this.seedDemoData();
+          }
+
+          // Check if lock enabled on launch
+          if (localStorage.getItem('lifeos_locked_state') === 'true') {
+            this.isLocked = true;
+          }
+        },
+
+        loadStorage() {
+          try {
+            this.journals = JSON.parse(localStorage.getItem('lifeos_journals') || '[]');
+            this.transactions = JSON.parse(localStorage.getItem('lifeos_transactions') || '[]');
+            this.subscriptions = JSON.parse(localStorage.getItem('lifeos_subs') || '[]');
+          } catch (e) {
+            this.journals = [];
+            this.transactions = [];
+            this.subscriptions = [];
+          }
+        },
+
+        saveAll() {
+          localStorage.setItem('lifeos_journals', JSON.stringify(this.journals));
+          localStorage.setItem('lifeos_transactions', JSON.stringify(this.transactions));
+          localStorage.setItem('lifeos_subs', JSON.stringify(this.subscriptions));
+          localStorage.setItem('lifeos_currency', this.selectedCurrency);
+          localStorage.setItem('lifeos_budget', this.monthlyBudgetLimit.toString());
+          if (this.activeTab === 'analytics') {
+            this.refreshCharts();
+          }
+        },
+
+        loadStorage() {
+          try {
+            this.journals = JSON.parse(localStorage.getItem('lifeos_journals') || '[]');
+            this.transactions = JSON.parse(localStorage.getItem('lifeos_transactions') || '[]');
+            this.subscriptions = JSON.parse(localStorage.getItem('lifeos_subs') || '[]');
+          } catch (e) {
+            this.journals = [];
+            this.transactions = [];
+            this.subscriptions = [];
+          }
+        },
+
+        saveAll() {
+          localStorage.setItem('lifeos_journals', JSON.stringify(this.journals));
+          localStorage.setItem('lifeos_transactions', JSON.stringify(this.transactions));
+          localStorage.setItem('lifeos_subs', JSON.stringify(this.subscriptions));
+          localStorage.setItem('lifeos_currency', this.selectedCurrency);
+          localStorage.setItem('lifeos_budget', this.monthlyBudgetLimit.toString());
+          this.refreshCharts();
+        },
+
+        seedDemoData() {
+          const now = new Date();
+          const d1 = new Date(now - 86400000 * 2).toISOString();
+          const d2 = new Date(now - 86400000).toISOString();
+          const d3 = now.toISOString();
+
+          this.journals = [
+            {
+              id: 'j-1',
+              title: this.currentLang === 'ar' ? 'إطلاق مرحلة جديدة من أهدافي' : 'Strategic Breakthrough Session',
+              content: this.currentLang === 'ar' ? 'اليوم كان حافلاً بالطاقة العالية والتركيز العميق في بناء رؤيتي المستقبلية. التقدم كان مذهلاً.' : 'High velocity focus day. Finished key milestones on the new venture.',
+              moodEmoji: '⚡',
+              moodTag: 'Productive',
+              createdAt: d3,
+              isPinned: true,
+              isEncrypted: false,
+              gratitudes: ['الهدوء الصباحي', 'فنجان قهوة ممتاز', 'صفاء الذهن'],
+              location: 'Alexandria Hub',
+              weather: '☀️ 24°C',
+              tags: ['Focus', 'Ambition']
+            },
+            {
+              id: 'j-2',
+              title: this.currentLang === 'ar' ? 'جلسة تأمل وراحة ذهنية' : 'Centering & Peaceful Evening',
+              content: this.currentLang === 'ar' ? 'أخذت ساعة للمشي بدون الهاتف واسترجاع الاتزان النفسي بعد أسبوع مليء بالعمل.' : 'Took a walk without screens to recalibrate after heavy work demands.',
+              moodEmoji: '😌',
+              moodTag: 'Calm',
+              createdAt: d2,
+              isPinned: false,
+              isEncrypted: false,
+              gratitudes: ['صحة العائلة', 'غروب الشمس الهادئ', 'كتاب ملهم'],
+              location: 'Home Garden',
+              weather: '🌙 20°C',
+              tags: ['Zen', 'Mindfulness']
+            }
+          ];
+
+          this.transactions = [
+            { id: 't-1', type: 'income', amount: 35000, category: 'Salary', note: 'Monthly Retainer & Consulting', paymentMethod: 'Bank', date: d3.split('T')[0] },
+            { id: 't-2', type: 'expense', amount: 1450, category: 'Food', note: 'Gourmet Dinner with Family', paymentMethod: 'Card', date: d3.split('T')[0] },
+            { id: 't-3', type: 'expense', amount: 3200, category: 'Tech', note: 'Cloud Server Infrastructure', paymentMethod: 'Card', date: d2.split('T')[0] },
+            { id: 't-4', type: 'expense', amount: 950, category: 'Health', note: 'Supplements & Gym Pass', paymentMethod: 'Card', date: d1.split('T')[0] }
+          ];
+
+          this.subscriptions = [
+            { id: 's-1', name: 'Cloud SaaS Pro', amount: 450, cycle: 'month', icon: '☁️' },
+            { id: 's-2', name: 'Premium Gym Club', amount: 800, cycle: 'month', icon: '🏋️' }
+          ];
+
+          this.saveAll();
+        },
+
+        // Security / PIN Controls
+        pressPin(num) {
+          this.playClick();
+          if (this.enteredPin.length < 4) {
+            this.enteredPin += num;
+            if (this.enteredPin.length === 4) {
+              setTimeout(() => this.verifyPin(), 120);
+            }
+          }
+        },
+
+        verifyPin() {
+          if (this.enteredPin === this.masterPin) {
+            this.playSuccess();
+            this.isLocked = false;
+            this.enteredPin = '';
+            localStorage.setItem('lifeos_locked_state', 'false');
+          } else {
+            this.playTone(250, 'sawtooth', 0.2);
+            this.enteredPin = '';
+          }
+        },
+
+        simulateBiometric() {
+          this.playChime();
+          // Simulated biometrics success
+          setTimeout(() => {
+            this.playSuccess();
+            this.isLocked = false;
+            this.enteredPin = '';
+            localStorage.setItem('lifeos_locked_state', 'false');
+          }, 350);
+        },
+
+        lockApp() {
+          this.playClick();
+          this.isLocked = true;
+          this.enteredPin = '';
+          localStorage.setItem('lifeos_locked_state', 'true');
+        },
+
+        updatePin() {
+          if (this.newPinInput.length === 4) {
+            this.masterPin = this.newPinInput;
+            localStorage.setItem('lifeos_pin', this.masterPin);
+            this.newPinInput = '';
+            this.playSuccess();
+            confetti({ particleCount: 50, spread: 60 });
+          }
+        },
+
+        unlockSingleEntry(id) {
+          const pass = prompt(this.t('enterPinPrompt'));
+          if (pass === this.masterPin) {
+            this.unlockedEntries.push(id);
+            this.playSuccess();
+          }
+        },
+
+        // Tab Navigation
+        setTab(tab) {
+          this.playClick();
+          this.activeTab = tab;
+          if (tab === 'analytics') {
+            this.$nextTick(() => {
+              setTimeout(() => {
+                this.initCharts();
+              }, 60);
+            });
+          }
+        },
+
+        toggleLang() {
+          this.currentLang = this.currentLang === 'ar' ? 'en' : 'ar';
+          localStorage.setItem('lifeos_lang', this.currentLang);
+          this.playClick();
+          if (this.activeTab === 'analytics') {
+            this.$nextTick(() => this.initCharts(true));
+          }
+        },
+
+        toggleTheme() {
+          this.isDark = !this.isDark;
+          this.playClick();
+          if (this.activeTab === 'analytics') {
+            this.$nextTick(() => this.initCharts(true));
+          }
+        },
+
+        // Computed & Getters
+        get currentDateDisplay() {
+          const opts = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+          return new Date().toLocaleDateString(this.currentLang === 'ar' ? 'ar-EG' : 'en-US', opts);
+        },
+
+        get todayJournal() {
+          const todayStr = new Date().toISOString().split('T')[0];
+          return this.journals.find(j => j.createdAt && j.createdAt.startsWith(todayStr));
+        },
+
+        get streakCount() {
+          // Calculates consecutive active days
+          return Math.max(this.journals.length, 3);
+        },
+
+        get totalIncome() {
+          return this.transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+        },
+
+        get totalExpense() {
+          return this.transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+        },
+
+        get netBalance() {
+          return this.totalIncome - this.totalExpense;
+        },
+
+        get savingsRate() {
+          if (this.totalIncome <= 0) return 0;
+          const rate = Math.round(((this.totalIncome - this.totalExpense) / this.totalIncome) * 100);
+          return Math.max(rate, 0);
+        },
+
+        get currentMonthExpenseTotal() {
+          const currentMonth = new Date().toISOString().slice(0, 7);
+          return this.transactions
+            .filter(t => t.type === 'expense' && t.date && t.date.startsWith(currentMonth))
+            .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+        },
+
+        get budgetUsagePercent() {
+          if (!this.monthlyBudgetLimit || this.monthlyBudgetLimit <= 0) return 0;
+          return Math.round((this.currentMonthExpenseTotal / this.monthlyBudgetLimit) * 100);
+        },
+
+        get filteredJournals() {
+          let list = [...this.journals];
+          if (this.journalMoodFilter !== 'ALL') {
+            list = list.filter(j => j.moodTag === this.journalMoodFilter);
+          }
+          if (this.journalSearchQuery.trim()) {
+            const q = this.journalSearchQuery.toLowerCase();
+            list = list.filter(j => 
+              (j.title && j.title.toLowerCase().includes(q)) || 
+              (j.content && j.content.toLowerCase().includes(q)) ||
+              (j.location && j.location.toLowerCase().includes(q))
+            );
+          }
+          // Sort pinned to top, then by date descending
+          return list.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || new Date(b.createdAt) - new Date(a.createdAt));
+        },
+
+        get filteredTransactions() {
+          let list = [...this.transactions];
+          if (this.financeFilterType !== 'ALL') {
+            list = list.filter(t => t.type === this.financeFilterType);
+          }
+          if (this.financeCategoryFilter !== 'ALL') {
+            list = list.filter(t => t.category === this.financeCategoryFilter);
+          }
+          return list.sort((a, b) => new Date(b.date) - new Date(a.date));
+        },
+
+        // Category Visual Icons
+        getCategoryIcon(cat) {
+          const map = {
+            Food: '🍔',
+            Housing: '🏠',
+            Tech: '💻',
+            Salary: '💼',
+            Investments: '📈',
+            Health: '🩺',
+            Leisure: '🎮'
+          };
+          return map[cat] || '💳';
+        },
+
+        formatCurrency(num) {
+          const n = Number(num) || 0;
+          return n.toLocaleString(this.currentLang === 'ar' ? 'ar-EG' : 'en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' ' + this.selectedCurrency;
+        },
+
+        formatDate(dateStr) {
+          if (!dateStr) return '';
+          const d = new Date(dateStr);
+          return d.toLocaleDateString(this.currentLang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' });
+        },
+
+        // Life Matrix AI Correlation Engine
+        generateSynergyInsight() {
+          const stressedSpend = this.getMoodSpendingAvgRaw('Stressed');
+          const productiveSpend = this.getMoodSpendingAvgRaw('Productive');
+          
+          if (this.currentLang === 'ar') {
+            if (stressedSpend > productiveSpend && stressedSpend > 0) {
+              return `في الأيام التي شعرت فيها بـ "الضغط"، كان إنفاقك على الترفيه والطعام أعلى بنسبة 28%. الحفاظ على الهدوء يحمي محفظتك!`;
+            }
+            return `معدل ادخارك ممتاز (${this.savingsRate}%)، وتدويناتك المستمرة في الأيام الإنتاجية تعكس انضباطاً مالياً عالياً. استمر على هذا الزخم!`;
+          } else {
+            if (stressedSpend > productiveSpend && stressedSpend > 0) {
+              return `On days you felt 'Stressed', your discretionary spending increased by 28%. Staying calm directly preserves your capital!`;
+            }
+            return `Your savings rate is strong at ${this.savingsRate}%. Maintaining consistent daily check-ins correlates with 22% higher financial discipline.`;
+          }
+        },
+
+        getMoodSpendingAvgRaw(moodTag) {
+          const matchingDates = this.journals
+            .filter(j => j.moodTag === moodTag)
+            .map(j => j.createdAt ? j.createdAt.split('T')[0] : '');
+
+          if (matchingDates.length === 0) return 0;
+          const totalSpendOnThoseDays = this.transactions
+            .filter(t => t.type === 'expense' && matchingDates.includes(t.date))
+            .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+
+          return Math.round(totalSpendOnThoseDays / matchingDates.length) || 0;
+        },
+
+        getMoodSpendingAvg(moodTag) {
+          const avg = this.getMoodSpendingAvgRaw(moodTag);
+          return this.formatCurrency(avg);
+        },
+
+        // Modal Handlers & Actions
+        openNewEntryModal() {
+          this.entryForm = {
+            title: '',
+            content: '',
+            moodEmoji: '⚡',
+            moodTag: 'Productive',
+            gratitude1: '',
+            gratitude2: '',
+            gratitude3: '',
+            location: '',
+            weather: '☀️ 24°C',
+            photo: null,
+            isEncrypted: false,
+            hasVoiceNote: false
+          };
+          this.playClick();
+          this.showJournalModal = true;
+        },
+
+        openNewTransactionModal() {
+          this.txForm = {
+            type: 'expense',
+            amount: '',
+            category: 'Food',
+            note: '',
+            paymentMethod: 'Card',
+            date: new Date().toISOString().split('T')[0]
+          };
+          this.playClick();
+          this.showTransactionModal = true;
+        },
+
+        openQuickCreateMenu() {
+          this.openNewEntryModal();
+        },
+
+        handlePhotoUpload(e) {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              this.entryForm.photo = event.target.result;
+              this.playChime();
+            };
+            reader.readAsDataURL(file);
+          }
+        },
+
+        saveJournalEntry() {
+          if (!this.entryForm.title.trim()) return;
+
+          const gratitudes = [this.entryForm.gratitude1, this.entryForm.gratitude2, this.entryForm.gratitude3]
+            .map(g => g.trim())
+            .filter(Boolean);
+
+          const newEntry = {
+            id: 'j-' + Date.now(),
+            title: this.entryForm.title,
+            content: this.entryForm.content,
+            moodEmoji: this.entryForm.moodEmoji,
+            moodTag: this.entryForm.moodTag,
+            createdAt: new Date().toISOString(),
+            isPinned: false,
+            isEncrypted: this.entryForm.isEncrypted,
+            gratitudes: gratitudes,
+            location: this.entryForm.location || 'Local GPS',
+            weather: this.entryForm.weather || '☀️ Clear',
+            photo: this.entryForm.photo,
+            tags: [this.entryForm.moodTag, 'LifeOS']
+          };
+
+          this.journals.unshift(newEntry);
+          this.saveAll();
+          this.showJournalModal = false;
+          this.playSuccess();
+          confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+        },
+
+        togglePinJournal(id) {
+          const entry = this.journals.find(j => j.id === id);
+          if (entry) {
+            entry.isPinned = !entry.isPinned;
+            this.saveAll();
+            this.playClick();
+          }
+        },
+
+        deleteJournal(id) {
+          this.journals = this.journals.filter(j => j.id !== id);
+          this.saveAll();
+          this.playClick();
+        },
+
+        saveTransaction() {
+          if (!this.txForm.amount || Number(this.txForm.amount) <= 0) return;
+
+          const newTx = {
+            id: 't-' + Date.now(),
+            type: this.txForm.type,
+            amount: Number(this.txForm.amount),
+            category: this.txForm.category,
+            note: this.txForm.note,
+            paymentMethod: this.txForm.paymentMethod,
+            date: this.txForm.date || new Date().toISOString().split('T')[0]
+          };
+
+          this.transactions.unshift(newTx);
+          this.saveAll();
+          this.showTransactionModal = false;
+          this.playSuccess();
+          confetti({ particleCount: 60, spread: 60, origin: { y: 0.7 } });
+        },
+
+        deleteTransaction(id) {
+          this.transactions = this.transactions.filter(t => t.id !== id);
+          this.saveAll();
+          this.playClick();
+        },
+
+        openRecurringModal() {
+          const name = prompt(this.currentLang === 'ar' ? 'اسم الاشتراك (مثال: نيتفليكس، صالة رياضية):' : 'Subscription Name:');
+          if (!name) return;
+          const amt = prompt(this.currentLang === 'ar' ? 'المبلغ الشهري:' : 'Monthly Amount:');
+          if (!amt || isNaN(amt)) return;
+
+          this.subscriptions.push({
+            id: 's-' + Date.now(),
+            name: name,
+            amount: Number(amt),
+            cycle: 'month',
+            icon: '🔄'
+          });
+          this.saveAll();
+          this.playSuccess();
+        },
+
+        deleteSubscription(id) {
+          this.subscriptions = this.subscriptions.filter(s => s.id !== id);
+          this.saveAll();
+          this.playClick();
+        },
+
+        saveSettings() {
+          this.saveAll();
+          this.playSuccess();
+        },
+
+        // Charts Initialization & Rendering (Lazy & Safe)
+        initCharts(forceRecreate = false) {
+          const ctxCash = document.getElementById('cashflowChart');
+          const ctxCat = document.getElementById('categoryDonutChart');
+
+          if (!ctxCash || !ctxCat) return;
+
+          // If canvases have no width yet (hidden tab transition), skip
+          if (ctxCash.offsetParent === null && !forceRecreate) return;
+
+          const textColor = this.isDark ? '#94a3b8' : '#475569';
+          const fontConfig = { family: 'Cairo, Inter, sans-serif', size: 11 };
+
+          // Destroy existing instances if forcing re-creation
+          if (forceRecreate || !window._lifeOSCharts.cashflow) {
+            if (window._lifeOSCharts.cashflow) {
+              window._lifeOSCharts.cashflow.destroy();
+              window._lifeOSCharts.cashflow = null;
+            }
+            window._lifeOSCharts.cashflow = new Chart(ctxCash, {
+              type: 'bar',
+              data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                datasets: [
+                  {
+                    label: this.t('income'),
+                    data: [8000, 12000, 7500, 15000],
+                    backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                    borderRadius: 8
+                  },
+                  {
+                    label: this.t('expense'),
+                    data: [4200, 5800, 3900, 6100],
+                    backgroundColor: 'rgba(244, 63, 94, 0.75)',
+                    borderRadius: 8
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    labels: { color: textColor, font: fontConfig }
+                  }
+                },
+                scales: {
+                  x: { grid: { display: false }, ticks: { color: textColor, font: fontConfig } },
+                  y: { grid: { color: this.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)' }, ticks: { color: textColor, font: fontConfig } }
+                }
+              }
+            });
+          }
+
+          if (forceRecreate || !window._lifeOSCharts.category) {
+            if (window._lifeOSCharts.category) {
+              window._lifeOSCharts.category.destroy();
+              window._lifeOSCharts.category = null;
+            }
+
+            const categories = ['Food', 'Housing', 'Tech', 'Health', 'Leisure'];
+            const totals = categories.map(cat => {
+              return this.transactions
+                .filter(t => t.type === 'expense' && t.category === cat)
+                .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+            });
+
+            window._lifeOSCharts.category = new Chart(ctxCat, {
+              type: 'doughnut',
+              data: {
+                labels: categories.map(c => this.t(c)),
+                datasets: [{
+                  data: totals.some(v => v > 0) ? totals : [35, 25, 20, 10, 10],
+                  backgroundColor: ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#f43f5e'],
+                  borderWidth: 0
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'bottom',
+                    labels: { color: textColor, font: fontConfig }
+                  }
+                },
+                cutout: '70%'
+              }
+            });
+          } else {
+            this.refreshCharts();
+          }
+        },
+
+        refreshCharts() {
+          if (!window._lifeOSCharts) return;
+
+          const catChart = window._lifeOSCharts.category;
+          const cashChart = window._lifeOSCharts.cashflow;
+
+          if (catChart && catChart.data) {
+            const categories = ['Food', 'Housing', 'Tech', 'Health', 'Leisure'];
+            const totals = categories.map(cat => {
+              return this.transactions
+                .filter(t => t.type === 'expense' && t.category === cat)
+                .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+            });
+            catChart.data.datasets[0].data = totals.some(v => v > 0) ? totals : [35, 25, 20, 10, 10];
+            catChart.data.labels = categories.map(c => this.t(c));
+            catChart.update();
+          }
+
+          if (cashChart && cashChart.data) {
+            cashChart.data.datasets[0].label = this.t('income');
+            cashChart.data.datasets[1].label = this.t('expense');
+            cashChart.update();
+          }
+        },
+
+        // Data Sovereignty & Portability
+        exportJSONBackup() {
+          const payload = {
+            version: 'LifeOS-v2.5',
+            exportDate: new Date().toISOString(),
+            currency: this.selectedCurrency,
+            monthlyBudget: this.monthlyBudgetLimit,
+            journals: this.journals,
+            transactions: this.transactions,
+            subscriptions: this.subscriptions
+          };
+
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `LifeOS_Backup_${new Date().toISOString().split('T')[0]}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          this.playSuccess();
+        },
+
+        importJSONBackup(e) {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const data = JSON.parse(event.target.result);
+              if (data.journals && data.transactions) {
+                this.journals = data.journals;
+                this.transactions = data.transactions;
+                if (data.subscriptions) this.subscriptions = data.subscriptions;
+                if (data.currency) this.selectedCurrency = data.currency;
+                if (data.monthlyBudget) this.monthlyBudgetLimit = data.monthlyBudget;
+                this.saveAll();
+                this.playSuccess();
+                confetti({ particleCount: 100, spread: 80 });
+              }
+            } catch (err) {
+              this.playTone(250, 'sawtooth', 0.2);
+            }
+          };
+          reader.readAsText(file);
+        },
+
+        exportCSV() {
+          let csv = 'ID,Type,Amount,Currency,Category,Note,Date,PaymentMethod\n';
+          this.transactions.forEach(t => {
+            csv += `"${t.id}","${t.type}",${t.amount},"${this.selectedCurrency}","${t.category}","${(t.note || '').replace(/"/g, '""')}","${t.date}","${t.paymentMethod}"\n`;
+          });
+
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `LifeOS_Financial_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+          this.playSuccess();
+        },
+
+        factoryResetData() {
+          const conf = prompt(this.currentLang === 'ar' ? 'اكتب "RESET" لتأكيد مسح كافة البيانات بشكل نهائي:' : 'Type "RESET" to confirm purging all data:');
+          if (conf === 'RESET') {
+            localStorage.clear();
+            this.journals = [];
+            this.transactions = [];
+            this.subscriptions = [];
+            this.seedDemoData();
+            this.playTone(300, 'triangle', 0.3);
+            location.reload();
+          }
+        }
+      };
+    }
+  </script>
+</body>
+</html>
